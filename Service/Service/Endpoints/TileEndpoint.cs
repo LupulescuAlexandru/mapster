@@ -60,12 +60,15 @@ internal class TileEndpoint : IDisposable
 
     private async Task RenderPng(Stream outputStream, TileRenderer.BoundingBox boundingBox, PriorityQueue<BaseShape, int> shapes, int width, int height)
     {
+        long lStart = DateTime.Now.Ticks;
         var canvas = await Task.Run(() =>
         {
             return shapes.Render(boundingBox, width, height);
         }).ConfigureAwait(continueOnCapturedContext: false);
 
         await canvas.SaveAsPngAsync(outputStream).ConfigureAwait(continueOnCapturedContext: false);
+        long lFinish = DateTime.Now.Ticks;
+        Console.WriteLine("RenderPng: " + TimeSpan.FromTicks(lFinish - lStart).TotalMilliseconds + " ms");
     }
 
     protected virtual void Dispose(bool disposing)
