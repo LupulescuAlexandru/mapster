@@ -40,6 +40,8 @@ internal class TileEndpoint : IDisposable
                 MaxX = float.MinValue,
                 MaxY = float.MinValue
             };
+
+            long lStart = DateTime.Now.Ticks;
             var shapes = new PriorityQueue<BaseShape, int>();
             tileEndpoint._mapData.ForeachFeature(
                 new BoundingBox(
@@ -52,6 +54,8 @@ internal class TileEndpoint : IDisposable
                     return true;
                 }
             );
+            long lFinish = DateTime.Now.Ticks;
+            Console.WriteLine("Tesselate running time: " + TimeSpan.FromTicks(lFinish - lStart).TotalMilliseconds + " ms");
 
             context.Response.ContentType = "image/png";
             await tileEndpoint.RenderPng(context.Response.BodyWriter.AsStream(), pixelBb, shapes, size.Value, size.Value);
@@ -60,15 +64,13 @@ internal class TileEndpoint : IDisposable
 
     private async Task RenderPng(Stream outputStream, TileRenderer.BoundingBox boundingBox, PriorityQueue<BaseShape, int> shapes, int width, int height)
     {
-        long lStart = DateTime.Now.Ticks;
+        
         var canvas = await Task.Run(() =>
         {
             return shapes.Render(boundingBox, width, height);
         }).ConfigureAwait(continueOnCapturedContext: false);
 
         await canvas.SaveAsPngAsync(outputStream).ConfigureAwait(continueOnCapturedContext: false);
-        long lFinish = DateTime.Now.Ticks;
-        Console.WriteLine("RenderPng: " + TimeSpan.FromTicks(lFinish - lStart).TotalMilliseconds + " ms");
     }
 
     protected virtual void Dispose(bool disposing)
