@@ -21,6 +21,27 @@ internal class TileEndpoint : IDisposable
         GC.SuppressFinalize(this);
     }
 
+    public static void LogPerformance(double time)
+    {
+        string path = "../../performance.txt";
+
+        if (!File.Exists(path))
+        {
+            // Create a file to write to.
+            using (StreamWriter sw = File.CreateText(path))
+            {
+                sw.WriteLine(time);
+            }
+        }
+        else
+        {
+            using (StreamWriter sw = File.AppendText(path))
+            {
+                sw.WriteLine(time);
+            }
+        }
+    }
+
     public static void Register(WebApplication app)
     {
         // Map HTTP GET requests to this
@@ -55,7 +76,9 @@ internal class TileEndpoint : IDisposable
                 }
             );
             long lFinish = DateTime.Now.Ticks;
-            Console.WriteLine("Tesselate running time: " + TimeSpan.FromTicks(lFinish - lStart).TotalMilliseconds + " ms");
+            double performance_ms = TimeSpan.FromTicks(lFinish - lStart).TotalMilliseconds;
+            LogPerformance(performance_ms);
+            Console.WriteLine("Tesselate running time: " + performance_ms + " ms");
 
             context.Response.ContentType = "image/png";
             await tileEndpoint.RenderPng(context.Response.BodyWriter.AsStream(), pixelBb, shapes, size.Value, size.Value);
@@ -64,7 +87,7 @@ internal class TileEndpoint : IDisposable
 
     private async Task RenderPng(Stream outputStream, TileRenderer.BoundingBox boundingBox, PriorityQueue<BaseShape, int> shapes, int width, int height)
     {
-        
+
         var canvas = await Task.Run(() =>
         {
             return shapes.Render(boundingBox, width, height);
