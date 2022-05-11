@@ -114,6 +114,40 @@ public static class Program
         return false;
     }
 
+    public static int GetElementType(List<string> keys, List<string> vals, int GeoType)
+    {
+        foreach (var item in keys.Zip(vals))
+        {
+            Console.WriteLine("{0}: {1}", item.First, item.Second);
+        }
+        Console.WriteLine();
+
+        if (keys.Exists(key => key == "highway") && vals.Exists(val => MapFeature.HighwayTypes.Any(type => val.StartsWith(type)))) return 1;
+        else if (keys.Exists(x => x.StartsWith("water")) && GeoType != 2) return 2;
+        else if (ShouldBeBorder(keys, vals)) return 3;
+        else if (ShouldBePopulatedPlace(keys, vals, GeoType)) return 4;
+        else if (keys.Exists(x => x.StartsWith("railway"))) return 5;
+        else if (keys.Exists(x => x.StartsWith("natural")) && GeoType == 1) return 6;
+        else if (keys.Exists(x => x.StartsWith("boundary")) && vals.Exists(x => x.StartsWith("forest"))) return 7;
+        else if (keys.Exists(x => x.StartsWith("landuse")) && vals.Exists(x => x.StartsWith("forest") || x.StartsWith("orchard"))) return 7;
+        else if (GeoType == 1 &&
+                keys.Exists(x => x.StartsWith("landuse")) &&
+                vals.Exists(x => x.StartsWith("residential") || x.StartsWith("cemetery") || x.StartsWith("industrial") || x.StartsWith("commercial") ||
+                x.StartsWith("square") || x.StartsWith("construction") || x.StartsWith("military") || x.StartsWith("quarry") ||
+                x.StartsWith("brownfield"))) return 9;
+        else if (GeoType == 1 &&
+                keys.Exists(x => x.StartsWith("landuse")) && vals.Exists(x => x.StartsWith("farm") || x.StartsWith("meadow") || x.StartsWith("grass") || x.StartsWith("greenfield") ||
+                x.StartsWith("recreation_ground") || x.StartsWith("winter_sports") || x.StartsWith("allotments"))) return 10;
+        else if (GeoType == 1 &&
+                keys.Exists(x => x.StartsWith("landuse")) &&
+                vals.Exists(x => x.StartsWith("reservoir") || x.StartsWith("basin"))) return 11;
+        else if (GeoType == 1 && keys.Exists(x => x.StartsWith("building"))) return 9;
+        else if (GeoType == 1 && keys.Exists(x => x.StartsWith("leisure"))) return 9;
+        else if (GeoType == 1 && keys.Exists(x => x.StartsWith("amenity"))) return 9;
+
+        return 0;
+    }
+
     private static void CreateMapDataFile(ref MapData mapData, string filePath)
     {
         var usedNodes = new HashSet<long>();
@@ -288,72 +322,7 @@ public static class Program
 
                 var keys = featureData.PropertyKeys.keys;
                 var vals = featureData.PropertyValues.values;
-
-                if (keys.Exists(key => key == "highway") && vals.Exists(val => MapFeature.HighwayTypes.Any(type => val.StartsWith(type))))
-                {
-                    fileWriter.Write(1);
-                }
-                else if (keys.Exists(x => x.StartsWith("water")) && featureData.GeometryType != 2)
-                {
-                    fileWriter.Write(2);
-                }
-                else if (ShouldBeBorder(keys, vals))
-                {
-                    fileWriter.Write(3);
-                }
-                else if (ShouldBePopulatedPlace(keys, vals, featureData.GeometryType))
-                {
-                    fileWriter.Write(4);
-                }
-                else if (keys.Exists(x => x.StartsWith("railway")))
-                {
-                    fileWriter.Write(5);
-                }
-                else if (keys.Exists(x => x.StartsWith("natural")) && featureData.GeometryType == 1)
-                {
-                    fileWriter.Write(6);
-                }
-                else if (keys.Exists(x => x.StartsWith("boundary")) && vals.Exists(x => x.StartsWith("forest")))
-                {
-                    fileWriter.Write(7);
-                }
-                else if (keys.Exists(x => x.StartsWith("landuse")) && vals.Exists(x => x.StartsWith("forest") || x.StartsWith("orchard")))
-                {
-                    fileWriter.Write(8);
-                }
-                else if (featureData.GeometryType == 1 &&
-                    keys.Exists(x => x.StartsWith("landuse")) && vals.Exists(x => x.StartsWith("residential") || x.StartsWith("cemetery") || x.StartsWith("industrial") || x.StartsWith("commercial") ||
-                                                                x.StartsWith("square") || x.StartsWith("construction") || x.StartsWith("military") || x.StartsWith("quarry") ||
-                                                                x.StartsWith("brownfield")))
-                {
-                    fileWriter.Write(9);
-                }
-                else if (featureData.GeometryType == 1 &&
-                    keys.Exists(x => x.StartsWith("landuse")) && vals.Exists(x => x.StartsWith("farm") || x.StartsWith("meadow") || x.StartsWith("grass") || x.StartsWith("greenfield") ||
-                                                                x.StartsWith("recreation_ground") || x.StartsWith("winter_sports") || x.StartsWith("allotments")))
-                {
-                    fileWriter.Write(10);
-                }
-                else if (featureData.GeometryType == 1 && keys.Exists(x => x.StartsWith("landuse")) && vals.Exists(x => x.StartsWith("reservoir") || x.StartsWith("basin")))
-                {
-                    fileWriter.Write(11);
-                }
-                else if (featureData.GeometryType == 1 && keys.Exists(x => x.StartsWith("building")))
-                {
-                    fileWriter.Write(12);
-                }
-                else if (featureData.GeometryType == 1 && keys.Exists(x => x.StartsWith("leisure")))
-                {
-                    fileWriter.Write(13);
-                }
-                else if (featureData.GeometryType == 1 && keys.Exists(x => x.StartsWith("amenity")))
-                {
-                    fileWriter.Write(14);
-                }
-                else
-                {
-                    fileWriter.Write(0);
-                }
+                fileWriter.Write(GetElementType(keys, vals, featureData.GeometryType));
             }
 
             // Record the current position in the stream
