@@ -129,4 +129,5 @@ public struct MapFeature
     [FieldOffset(17)] public int CoordinateCount;
     [FieldOffset(21)] public int PropertiesOffset;
     [FieldOffset(25)] public int PropertyCount;
+    [FieldOffset(29)] public int ElementType;
 }

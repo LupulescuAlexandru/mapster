@@ -66,6 +66,54 @@ public static class Program
         };
     }
 
+    public static bool ShouldBeBorder(List<string> keys, List<string> values)
+    {
+        // https://wiki.openstreetmap.org/wiki/Key:admin_level
+        var foundBoundary = false;
+        var foundLevel = false;
+
+        foreach (var nw in keys.Zip(values, Tuple.Create))
+        {
+            if (nw.Item1.StartsWith("boundary") && nw.Item2.StartsWith("administrative"))
+            {
+                foundBoundary = true;
+            }
+            if (nw.Item1.StartsWith("admin_level") && nw.Item2 == "2")
+            {
+                foundLevel = true;
+            }
+            if (foundBoundary && foundLevel)
+            {
+                break;
+            }
+        }
+
+        return foundBoundary && foundLevel;
+    }
+
+    public static bool ShouldBePopulatedPlace(List<string> keys, List<string> values, int GeoType)
+    {
+        // https://wiki.openstreetmap.org/wiki/Key:place
+        if (GeoType != (int)GeometryType.Point)
+        {
+            return false;
+        }
+
+        foreach (var nw in keys.Zip(values, Tuple.Create))
+        {
+            if (nw.Item1.StartsWith("place"))
+            {
+                if (nw.Item2.StartsWith("city") || nw.Item2.StartsWith("town") ||
+                    nw.Item2.StartsWith("locality") || nw.Item2.StartsWith("hamlet"))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     private static void CreateMapDataFile(ref MapData mapData, string filePath)
     {
         var usedNodes = new HashSet<long>();
@@ -230,7 +278,6 @@ public static class Program
             for (var i = 0; i < featureIds.Count; ++i)
             {
                 var featureData = featuresData[featureIds[i]];
-
                 fileWriter.Write(featureIds[i]); // MapFeature: Id
                 fileWriter.Write(labels[i]); // MapFeature: LabelOffset
                 fileWriter.Write(featureData.GeometryType); // MapFeature: GeometryType
@@ -238,6 +285,75 @@ public static class Program
                 fileWriter.Write(featureData.Coordinates.coordinates.Count); // MapFeature: CoordinateCount
                 fileWriter.Write(featureData.PropertyKeys.offset * 2); // MapFeature: PropertiesOffset 
                 fileWriter.Write(featureData.PropertyKeys.keys.Count); // MapFeature: PropertyCount
+
+                var keys = featureData.PropertyKeys.keys;
+                var vals = featureData.PropertyValues.values;
+
+                if (keys.Exists(key => key == "highway") && vals.Exists(val => MapFeature.HighwayTypes.Any(type => val.StartsWith(type))))
+                {
+                    fileWriter.Write(1);
+                }
+                else if (keys.Exists(x => x.StartsWith("water")) && featureData.GeometryType != 2)
+                {
+                    fileWriter.Write(2);
+                }
+                else if (ShouldBeBorder(keys, vals))
+                {
+                    fileWriter.Write(3);
+                }
+                else if (ShouldBePopulatedPlace(keys, vals, featureData.GeometryType))
+                {
+                    fileWriter.Write(4);
+                }
+                else if (keys.Exists(x => x.StartsWith("railway")))
+                {
+                    fileWriter.Write(5);
+                }
+                else if (keys.Exists(x => x.StartsWith("natural")) && featureData.GeometryType == 1)
+                {
+                    fileWriter.Write(6);
+                }
+                else if (keys.Exists(x => x.StartsWith("boundary")) && vals.Exists(x => x.StartsWith("forest")))
+                {
+                    fileWriter.Write(7);
+                }
+                else if (keys.Exists(x => x.StartsWith("landuse")) && vals.Exists(x => x.StartsWith("forest") || x.StartsWith("orchard")))
+                {
+                    fileWriter.Write(8);
+                }
+                else if (featureData.GeometryType == 1 &&
+                    keys.Exists(x => x.StartsWith("landuse")) && vals.Exists(x => x.StartsWith("residential") || x.StartsWith("cemetery") || x.StartsWith("industrial") || x.StartsWith("commercial") ||
+                                                                x.StartsWith("square") || x.StartsWith("construction") || x.StartsWith("military") || x.StartsWith("quarry") ||
+                                                                x.StartsWith("brownfield")))
+                {
+                    fileWriter.Write(9);
+                }
+                else if (featureData.GeometryType == 1 &&
+                    keys.Exists(x => x.StartsWith("landuse")) && vals.Exists(x => x.StartsWith("farm") || x.StartsWith("meadow") || x.StartsWith("grass") || x.StartsWith("greenfield") ||
+                                                                x.StartsWith("recreation_ground") || x.StartsWith("winter_sports") || x.StartsWith("allotments")))
+                {
+                    fileWriter.Write(10);
+                }
+                else if (featureData.GeometryType == 1 && keys.Exists(x => x.StartsWith("landuse")) && vals.Exists(x => x.StartsWith("reservoir") || x.StartsWith("basin")))
+                {
+                    fileWriter.Write(11);
+                }
+                else if (featureData.GeometryType == 1 && keys.Exists(x => x.StartsWith("building")))
+                {
+                    fileWriter.Write(12);
+                }
+                else if (featureData.GeometryType == 1 && keys.Exists(x => x.StartsWith("leisure")))
+                {
+                    fileWriter.Write(13);
+                }
+                else if (featureData.GeometryType == 1 && keys.Exists(x => x.StartsWith("amenity")))
+                {
+                    fileWriter.Write(14);
+                }
+                else
+                {
+                    fileWriter.Write(0);
+                }
             }
 
             // Record the current position in the stream
@@ -276,6 +392,7 @@ public static class Program
                 {
                     ReadOnlySpan<char> k = featureData.PropertyKeys.keys[i];
                     ReadOnlySpan<char> v = featureData.PropertyValues.values[i];
+                    //Console.WriteLine(k.ToString() + ": " + v.ToString());
 
                     fileWriter.Write(stringOffset); // StringEntry: Offset
                     fileWriter.Write(k.Length); // StringEntry: Length

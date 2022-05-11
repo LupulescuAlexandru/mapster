@@ -25,6 +25,7 @@ public readonly ref struct MapFeatureData
     public ReadOnlySpan<char> Label { get; init; }
     public ReadOnlySpan<Coordinate> Coordinates { get; init; }
     public Dictionary<string, string> Properties { get; init; }
+    public readonly int ElementType { get; init; }
 }
 
 /// <summary>
@@ -187,14 +188,14 @@ public unsafe class DataFile : IDisposable
                         GetProperty(header.Tile.Value.StringsOffsetInBytes, header.Tile.Value.CharactersOffsetInBytes, p * 2 + feature->PropertiesOffset, out var key, out var value);
                         properties.Add(key.ToString(), value.ToString());
                     }
-
                     if (!action(new MapFeatureData
                         {
                             Id = feature->Id,
                             Label = label,
                             Coordinates = coordinates,
                             Type = feature->GeometryType,
-                            Properties = properties
+                            Properties = properties,
+                            ElementType = feature->ElementType,
                         }))
                     {
                         break;
