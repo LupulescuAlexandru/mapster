@@ -5,6 +5,7 @@ using System.Runtime.Serialization;
 using CommandLine;
 using Mapster.Common;
 using Mapster.Common.MemoryMappedTypes;
+using Mapster.Common.ShapeTypes;
 using OSMDataParser;
 using OSMDataParser.Elements;
 
@@ -114,36 +115,30 @@ public static class Program
         return false;
     }
 
-    public static int GetElementType(List<string> keys, List<string> vals, int GeoType)
+    public static ShapeType GetElementType(List<string> keys, List<string> vals, int GeoType)
     {
-        foreach (var item in keys.Zip(vals))
-        {
-            Console.WriteLine("{0}: {1}", item.First, item.Second);
-        }
-        Console.WriteLine();
-
-        if (keys.Exists(key => key == "highway") && vals.Exists(val => MapFeature.HighwayTypes.Any(type => val.StartsWith(type)))) return 1;
-        else if (keys.Exists(x => x.StartsWith("water")) && GeoType != 2) return 2;
-        else if (ShouldBeBorder(keys, vals)) return 3;
-        else if (ShouldBePopulatedPlace(keys, vals, GeoType)) return 4;
-        else if (keys.Exists(x => x.StartsWith("railway"))) return 5;
-        else if (keys.Exists(x => x.StartsWith("natural")) && GeoType == 1) return 6;
-        else if (keys.Exists(x => x.StartsWith("boundary")) && vals.Exists(x => x.StartsWith("forest"))) return 7;
-        else if (keys.Exists(x => x.StartsWith("landuse")) && vals.Exists(x => x.StartsWith("forest") || x.StartsWith("orchard"))) return 7;
+        if (keys.Exists(key => key == "highway") && vals.Exists(val => MapFeature.HighwayTypes.Any(type => val.StartsWith(type)))) return ShapeType.Road;
+        else if (keys.Exists(x => x.StartsWith("water")) && GeoType != 2) return ShapeType.Waterway;
+        else if (ShouldBeBorder(keys, vals)) return ShapeType.Border;
+        else if (ShouldBePopulatedPlace(keys, vals, GeoType)) return ShapeType.PopulatedPlace;
+        else if (keys.Exists(x => x.StartsWith("railway"))) return ShapeType.Railway;
+        else if (keys.Exists(x => x.StartsWith("natural")) && GeoType == 1) return ShapeType.Natural;
+        else if (keys.Exists(x => x.StartsWith("boundary")) && vals.Exists(x => x.StartsWith("forest"))) return ShapeType.Forest;
+        else if (keys.Exists(x => x.StartsWith("landuse")) && vals.Exists(x => x.StartsWith("forest") || x.StartsWith("orchard"))) return ShapeType.Forest;
         else if (GeoType == 1 &&
                 keys.Exists(x => x.StartsWith("landuse")) &&
                 vals.Exists(x => x.StartsWith("residential") || x.StartsWith("cemetery") || x.StartsWith("industrial") || x.StartsWith("commercial") ||
                 x.StartsWith("square") || x.StartsWith("construction") || x.StartsWith("military") || x.StartsWith("quarry") ||
-                x.StartsWith("brownfield"))) return 9;
+                x.StartsWith("brownfield"))) return ShapeType.Residential;
+        else if (GeoType == 1 && keys.Exists(x => x.StartsWith("building"))) return ShapeType.Residential;
+        else if (GeoType == 1 && keys.Exists(x => x.StartsWith("leisure"))) return ShapeType.Residential;
+        else if (GeoType == 1 && keys.Exists(x => x.StartsWith("amenity"))) return ShapeType.Residential;
         else if (GeoType == 1 &&
                 keys.Exists(x => x.StartsWith("landuse")) && vals.Exists(x => x.StartsWith("farm") || x.StartsWith("meadow") || x.StartsWith("grass") || x.StartsWith("greenfield") ||
-                x.StartsWith("recreation_ground") || x.StartsWith("winter_sports") || x.StartsWith("allotments"))) return 10;
+                x.StartsWith("recreation_ground") || x.StartsWith("winter_sports") || x.StartsWith("allotments"))) return ShapeType.Plain;
         else if (GeoType == 1 &&
                 keys.Exists(x => x.StartsWith("landuse")) &&
-                vals.Exists(x => x.StartsWith("reservoir") || x.StartsWith("basin"))) return 11;
-        else if (GeoType == 1 && keys.Exists(x => x.StartsWith("building"))) return 9;
-        else if (GeoType == 1 && keys.Exists(x => x.StartsWith("leisure"))) return 9;
-        else if (GeoType == 1 && keys.Exists(x => x.StartsWith("amenity"))) return 9;
+                vals.Exists(x => x.StartsWith("reservoir") || x.StartsWith("basin"))) return ShapeType.Water;
 
         return 0;
     }
@@ -322,7 +317,7 @@ public static class Program
 
                 var keys = featureData.PropertyKeys.keys;
                 var vals = featureData.PropertyValues.values;
-                fileWriter.Write(GetElementType(keys, vals, featureData.GeometryType));
+                fileWriter.Write((int)GetElementType(keys, vals, featureData.GeometryType));
             }
 
             // Record the current position in the stream
