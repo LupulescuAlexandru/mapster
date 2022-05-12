@@ -1,5 +1,8 @@
 Mapster
 -----------------------
+### Performance improvement sheet
+![alt text](https://i.imgur.com/JdOY47D.png)
+
 The solution in this repository contains several projects that aim to read and extract information from the OpenStreeMap binary [`osm.pbf`](https://wiki.openstreetmap.org/wiki/PBF_Format) format, as well as interpret and present this data in a user-facing way.
 
 To this end the solution contains several parts that are used at different times in the lifetime of the application.
