@@ -23,7 +23,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <None Update="MapData\andorra-10032022.bin">
+      <None Update="MapData\andorra.bin">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
     </ItemGroup>
